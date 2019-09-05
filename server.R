@@ -16,21 +16,7 @@
 #################################################################
 
 
-#' @title server
-#' @name server
-#' @author Carlos Alexandre Romani
-#'
-#' @description Analysis 
-#' 
-#' @usage 
-#' 
-#' @export server
-#' @import shiny
-#' @import raster
-#' 
-
-
-#runApp("~/Dropbox/MESTRADO/LuccPL/R")
+#runApp("~/Dropbox/MESTRADO/PACKAGES/LuccWEB")
 
 
 # install packages
@@ -127,53 +113,21 @@ server <- function(input, output, session) {
   # import dates
   dates <- reactive( as.character(read.table(input$datesPath$datapath)$V1) )
   
+  colors <- reactive( as.character(read.table(input$colors$datapath)$V1) )
+
+  
   # if plotResult button is clicked
   observeEvent(input$plotInput2, {
-    print(dates)
-    
-    colors <- reactive( as.character(read.table(input$colors$datapath)$V1) )
-    print(colors)
-    
-    print('create subfolder')
-    
-    # create folder to jpeg images
-    dir.create(file.path(folderPath(), "jpeg"), showWarnings = FALSE)
-    showNotification("Export jpeg", duration = 20)
-    print('Export jpeg')
-    pracma::tic("Write jpeg")
-    # parallel export jpeg images
-    apply(as.list(1:(length(dates))),function(i) {
-      file <-  file.path(folderPath(), "jpeg", paste0("plotIn",i,".jpeg"))
-      print(file)
-      jpeg(file = file, bg = "gray", height=nrow(brick_created[[i]]), width=ncol(brickRasterInput[[i]]))
-      print(rasterVis::levelplot(brickRasterInput[[i]], col.regions=colors,  contour=F, margin=F, scales = list(draw=FALSE), colorkey=NULL,
-                                 par.settings = list(axis.line = list(line=0), mar=c(0,0,0,0), omi=c(0,0,0,0), 
-                                                     xaxt='n', yaxt='n', bg='gray')))
-      dev.off()
-    })
-    pracma::toc()
-    #print(paste("Jpeg exported in:", as.numeric(t), "seconds"))
-    showNotification(paste("Jpeg exported in:", as.numeric(t), "seconds"), duration = 60)
+
+
+    showNotification("Plotting...", duration = 20)
+    LuccPL::plot_input(brickRasterInput(),dates(),metadata(),colors(),paste0(folderPath(),"/mpInput.jpeg"), map_title="13 classes MT recorte", Width = 1200, Height = 1200)
     
     
-    
-    
-    insertUI(
-      selector = "#plotInput2",
-      where = "beforeBegin",
-      ui =  fluidRow(
-        
-        selectInput("tstepIn2", label = 'Date', choices = dates(), multiple=FALSE, selectize=TRUE)
-        # function to plot images imported
-        
-        
-      )
-      
-    )
     output$imageInput2 <- renderImage({
       width  <- session$clientData$output_imageInput2_width
       list(
-        src = file.path(folderPath(), "jpeg", paste0("plotIn", (which(dates() == input$tstepIn2)),".jpeg")),
+        src = file.path(folderPath(), "mpInput.jpeg"),
         width = width,
         contentType = "image/jpeg",
         alt = input$tstepIn2
@@ -285,6 +239,35 @@ server <- function(input, output, session) {
     print('Done')
     showNotification("Done" ,duration = 60)
   })
+  
+  
+  
+  # PLOT OUTPUT
+  # if plotResult button is clicked
+  observeEvent(input$plotOutput1, {
+    
+    filenameOut <- paste(folderPath(), 'stOutput.tif', sep = '/')
+    brickRasterOutput <- raster::brick(filenameOut)
+    showNotification("Plotting...", duration = 20)
+    LuccPL::plot_output(brickRasterOutput,dates(),paste0(folderPath(),"/mpOutput.jpeg"), map_title="", Width = 1200, Height = 1200)
+    
+    
+    output$imageOutput1 <- renderImage({
+      width  <- session$clientData$output_imageInput2_width
+      list(
+        src = file.path(folderPath(), "mpOutput.jpeg"),
+        width = width,
+        contentType = "image/jpeg",
+        alt = input$tstepIn2
+      )
+      
+    }, deleteFile = FALSE)
+    
+  })
+  
+
+  
+  
   # COUNT
   observeEvent(input$count, {
     filenameOutCount <- paste(folderPath(), 'rasterCount.tif', sep = '/')
@@ -331,23 +314,58 @@ server <- function(input, output, session) {
     gc()
   })
   
-  # PLOTBAR
-  observeEvent(input$plotbar, {
-    filenameOutBarplot <- paste(folderPath(), 'bargraph.jpeg', sep = '/')
+  # PLOTBAR Input
+  observeEvent(input$plotbarI, {
+    filenameOutBarplot <- paste(folderPath(), 'barplotI.jpeg', sep = '/')
     print("Ploting...")
     showNotification("Ploting...", duration = 20)
-    brickOutput <- raster::brick(paste(folderPath(), 'stOutput.tif', sep = '/'))
+    brickInput <- raster::brick(paste(folderPath(), 'stInput.tif', sep = '/'))
+    graphIn <- LuccPL::count(brickInput, for_time_step = TRUE, metadata = metadata, dates = dates)
+    write.csv(graphIn, paste0(folderPath(),"/graphIn.csv"))
     
-    graph <- count(brickOutput, for_time_step = TRUE, metadata = metadata, dates = dates)
+    LuccPL::lucc_barplot_data(df = graphIn(), dates = dates(), graph_title="13 classes MT recorte", style="bar", colors = colors(), path_save_jpeg = folderPath())
     
-    lucc_barplot_data(df = graph, dates = dates, style="bar",
-                      colors = colors, path_save_jpeg = paste0(path,"/results"))
-    
+    output$imageOutput5 <- renderImage({
+      width  <- session$clientData$output_imageInput2_width
+      list(
+        src = file.path(folderPath(), "barplotI.jpeg"),
+        width = width,
+        contentType = "image/jpeg",
+        alt = input$tstepIn2
+      )
+      
+    }, deleteFile = FALSE)
     
     showNotification("Done", duration = NULL)
     gc()
   })
   
+  # PLOTBAR Output
+  observeEvent(input$plotbarO, {
+    filenameOutBarplot <- paste(folderPath(), 'barplotO.jpeg', sep = '/')
+    print("Ploting...")
+    showNotification("Ploting...", duration = 20)
+    brickOutput <- raster::brick(paste(folderPath(), 'stOutput.tif', sep = '/'))
+    graphOut <- LuccPL::count(brickOutput, for_time_step = TRUE, metadata = c("0.false","1.true"), dates = dates)
+    write.csv(graphOut, paste0(path,"/graphOut.csv"))
+    
+    LuccPL::lucc_barplot_result(df = graphOut(), dates = dates(), graph_title="Evolve Forest - Soy", style="bar", colors = c("white","black"), path_save_jpeg = folderPath())
+   
+    output$imageOutput5 <- renderImage({
+      width  <- session$clientData$output_imageInput2_width
+      list(
+        src = file.path(folderPath(), "barplotO.jpeg"),
+        width = width,
+        contentType = "image/jpeg",
+        alt = input$tstepIn2
+      )
+      
+    }, deleteFile = FALSE)
+    
+    
+    showNotification("Done", duration = NULL)
+    gc()
+  })
   
   
   #########################################  PAGE 4 (EXPORT)  #################################################    
