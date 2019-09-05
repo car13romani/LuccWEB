@@ -148,11 +148,23 @@ navbarPage("LuccPL",
                                            ),
                                            
                                            br(),
-                                           fluidRow(
-                                             actionButton("count", "Count"),
-                                             actionButton("variance", "Variance"),
-                                             actionButton("plotbar", "Plot Bar Graph")
+                                           
+                                           
+                                            fluidRow(
+                                           #   actionButton("count", "Count"),
+                                           #   actionButton("variance", "Variance"),
+                                              actionButton("plotOutput1", "Plot Output")
+                                            ),
+                                           mainPanel(
+                                             # Use imageOutput to place the image on the page
+                                             imageOutput("imageOutput1")
+                                             
                                            ),
+                                          # fluidRow(
+                                          #   actionButton("count", "Count"),
+                                          #   actionButton("variance", "Variance"),
+                                          #   actionButton("plotbar", "Plot Bar Graph")
+                                          # ),
                                            br(),
                                            #textOutput("teste"),
                                            tableOutput("table")
@@ -164,20 +176,30 @@ navbarPage("LuccPL",
                                 ########################################  PAGE 3 (EXPORT)  #####################################
                                 tabPanel("Export",
                                          sidebarLayout(
-                                           sidebarPanel(
+                                           #sidebarPanel(
                                              
-                                             selectInput("tstepOut1", label = 'Date', choices = 1:16, multiple=FALSE, selectize=TRUE),
+                                             fluidRow(
+                                                  actionButton("count", "Count"),
+                                                  #actionButton("variance", "Variance"),
+                                                  actionButton("plotbarI", "Plot Input Bar Graph"),
+                                                  actionButton("plotbarO", "Plot Input Bar Graph"),
+                                                  actionButton("plotlineI", "Plot Input Line Graph"),
+                                                  actionButton("plotlineO", "Plot Input Line Graph")
+                                                ),
                                              
-                                             actionButton("plotResult1", "Plot result"),
                                              
-                                             downloadButton('stOut.tif', 'Download')
+                                             #selectInput("tstepOut1", label = 'Date', choices = 1:16, multiple=FALSE, selectize=TRUE),
                                              
-                                           ),
+                                             #actionButton("plotResult1", "Plot result"),
+                                             
+                                             #downloadButton('stOut.tif', 'Download')
+                                             
+                                           #),
                                            
                                            
                                            mainPanel(
                                              # Use imageOutput to place the image on the page
-                                             imageOutput("imageOutput1")
+                                             imageOutput("imageOutput5")
                                            )
                                            
                                          )
