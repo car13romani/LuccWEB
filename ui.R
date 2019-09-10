@@ -155,6 +155,7 @@ navbarPage("LuccPL",
                                            #   actionButton("variance", "Variance"),
                                               actionButton("plotOutput1", "Plot Output")
                                             ),
+                                           br(),
                                            mainPanel(
                                              # Use imageOutput to place the image on the page
                                              imageOutput("imageOutput1")
@@ -176,17 +177,22 @@ navbarPage("LuccPL",
                                 ########################################  PAGE 3 (EXPORT)  #####################################
                                 tabPanel("Export",
                                          sidebarLayout(
-                                           #sidebarPanel(
+                                           sidebarPanel(
                                              
                                              fluidRow(
                                                   actionButton("count", "Count"),
-                                                  #actionButton("variance", "Variance"),
-                                                  actionButton("plotbarI", "Plot Input Bar Graph"),
-                                                  actionButton("plotbarO", "Plot Input Bar Graph"),
-                                                  actionButton("plotlineI", "Plot Input Line Graph"),
-                                                  actionButton("plotlineO", "Plot Input Line Graph")
+                                                  actionButton("variance", "Variance"),
+                                                  actionButton("true", "True")
                                                 ),
-                                             
+                                             fluidRow(
+                                               column(12, textInput("name_plot", "Name of graph"))
+                                             ),
+                                             fluidRow(
+                                                 actionButton("plotbarI", "Plot Input Bar Graph"),
+                                                 actionButton("plotlineI", "Plot Input Line Graph"),
+                                                 actionButton("plotbarO", "Plot Output Bar Graph"),
+                                                 actionButton("plotlineO", "Plot Output Line Graph")
+                                             )
                                              
                                              #selectInput("tstepOut1", label = 'Date', choices = 1:16, multiple=FALSE, selectize=TRUE),
                                              
@@ -194,7 +200,7 @@ navbarPage("LuccPL",
                                              
                                              #downloadButton('stOut.tif', 'Download')
                                              
-                                           #),
+                                           ),
                                            
                                            
                                            mainPanel(
@@ -204,8 +210,8 @@ navbarPage("LuccPL",
                                            
                                          )
                                          
-                                         
-                                )
+                                )                 
+                                
 )
 
 
