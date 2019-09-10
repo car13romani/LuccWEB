@@ -39,7 +39,7 @@ library(jpeg)
 library(shiny)
 
 
-options(shiny.maxRequestSize=3000*1024^2) 
+options(shiny.port = 80, shiny.maxRequestSize=3000*1024^2, shiny.launch.browser = "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe") 
 server <- function(input, output, session) {
   
   ########################################  PAGE 1 (BRICK)  #####################################  
@@ -75,10 +75,10 @@ server <- function(input, output, session) {
     showNotification("Making brick", duration = 20)
     
     pracma::tic("Make brick")
-    brick_created <- raster::brick(raster::stack(pathh),  progress = "text", datatype='INT4S')
+    rbrick <- raster::brick(raster::stack(pathh),  progress = "text", datatype='INT4S')
     t <- pracma::toc()
     #print(paste("Brick created in:", (end.time-start.time), "seconds"))
-    showNotification(paste("Brick created in:", as.numeric(t), "seconds"), duration = NULL)
+    showNotification(paste("Brick created in:", as.integer(t), "seconds"),duration = 20)
     
     
     # write a brick in project folder
@@ -86,10 +86,10 @@ server <- function(input, output, session) {
     showNotification("Export raster", duration = 20)
     print('Export raster')
     pracma::tic("Write raster brick")
-    raster::writeRaster(brick_created, filename = filename, datatype='INT4S', overwrite=TRUE, progress = "text")
+    raster::writeRaster(rbrick, filename = filename, datatype='INT4S', overwrite=TRUE, progress = "text")
     t <- pracma::toc()
     #print(paste("Brick exported in:", as.numeric(t), "seconds"))
-    showNotification(paste("Brick exported in:", as.numeric(t), "seconds"), duration = NULL)
+    showNotification(paste("Brick exported in:", as.integer(t), "seconds"),duration = 20)
     
     gc()
     showNotification("Done", duration = 20)
@@ -105,7 +105,7 @@ server <- function(input, output, session) {
   ########################################  PAGE 2 (IMPORT)  #####################################
   
   # import datacube file (tif)
-  brickRasterInput <- reactive( raster::brick(input$dataFolder$datapath) )
+  rbrick <- reactive( raster::brick(input$dataFolder$datapath) )
   
   # import metadata file
   metadata <- reactive( as.character(read.table(input$mdataPath$datapath)$V1) )
@@ -120,9 +120,9 @@ server <- function(input, output, session) {
   observeEvent(input$plotInput2, {
 
 
-    showNotification("Plotting...", duration = 20)
-    LuccPL::plot_input(brickRasterInput(),dates(),metadata(),colors(),paste0(folderPath(),"/mpInput.jpeg"), map_title="13 classes MT recorte", Width = 1200, Height = 1200)
-    
+    showNotification("Plotting input data...", duration = 20)
+    LuccPL::plot_input(rbrick(),dates(),metadata(),colors(),paste0(folderPath(),"/mpInput.jpeg"), map_title="13 classes MT recorte", Width = 1200, Height = 1200)
+    showNotification("Plotting done", duration = 20)
     
     output$imageInput2 <- renderImage({
       width  <- session$clientData$output_imageInput2_width
@@ -201,7 +201,7 @@ server <- function(input, output, session) {
         }
         
         print(fList)
-        LuccPL::query(input_dc = brickRasterInput(), FUN_list = fList)
+        LuccPL::query(input_dc = rbrick(), FUN_list = fList)
         
       })
       #print(qout())
@@ -220,24 +220,24 @@ server <- function(input, output, session) {
     showNotification("Processing...", duration = 20)
     pracma::tic("Process total")
     pracma::tic("Process")
-    brickRasterOutput <- LuccPL::event(brickRasterInput(), qout())
+    rbrickO <- LuccPL::event(rbrick(), qout())
     t <- pracma::toc()
     #print(paste("Processed in:", (end.time-start.time), "seconds"))
-    showNotification(paste("Processed in:", as.numeric(t), "seconds"), duration = 60)
-    print(paste("Processed in:", as.numeric(t), "seconds"))
+    showNotification(paste("Processed in:", as.integer(t), "seconds"), duration = 20)
+    print(paste("Processed in:", as.integer(t), "seconds"))
     print("Export brick")
-    showNotification("Export brick", duration = 20)
+    showNotification("Export output brick", duration = 20)
     filenameOut <- paste(folderPath(), 'stOutput.tif', sep = '/')
     pracma::tic("Write raster")
-    raster::writeRaster(brickRasterOutput, filename = filenameOut, datatype='INT4S', overwrite=TRUE, progress = "text")
+    raster::writeRaster(rbrickO, filename = filenameOut, datatype='INT4S', overwrite=TRUE, progress = "text")
     t <- pracma::toc()
     #print(paste("Brick exported in:", (end.time-start.time), "seconds"))
-    showNotification(paste("Brick exported in:", as.numeric(t), "seconds"), duration = 60)
-   
-    rm(brickRasterOutput)
+    showNotification(paste("Brick exported in:", as.integer(t), "seconds"), duration = 20)
+    showNotification("Process done", duration = NULL)
+    rm(rbrickO)
     gc()
     print('Done')
-    showNotification("Done" ,duration = 60)
+    
   })
   
   
@@ -247,10 +247,11 @@ server <- function(input, output, session) {
   observeEvent(input$plotOutput1, {
     
     filenameOut <- paste(folderPath(), 'stOutput.tif', sep = '/')
-    brickRasterOutput <- raster::brick(filenameOut)
-    showNotification("Plotting...", duration = 20)
-    LuccPL::plot_output(brickRasterOutput,dates(),paste0(folderPath(),"/mpOutput.jpeg"), map_title="", Width = 1200, Height = 1200)
+    rbrickO <- raster::brick(filenameOut)
+    showNotification("Plotting output...", duration = 20)
+    LuccPL::plot_output(rbrickO,dates(),paste0(folderPath(),"/mpOutput.jpeg"), map_title="", Width = 1200, Height = 1200)
     
+    showNotification("Plotting done...", duration = 20)
     
     output$imageOutput1 <- renderImage({
       width  <- session$clientData$output_imageInput2_width
@@ -267,26 +268,26 @@ server <- function(input, output, session) {
   
 
   
-  
+  ##############################################################################################
   # COUNT
   observeEvent(input$count, {
     filenameOutCount <- paste(folderPath(), 'rasterCount.tif', sep = '/')
     print("Processing count...")
     showNotification("Processing count...", duration = 20)
-    brickOutput <- raster::brick(paste(folderPath(), 'stOutput.tif', sep = '/'))
+    rbrickO <- raster::brick(paste(folderPath(), 'stOutput.tif', sep = '/'))
     pracma::tic("Count")
-    rasterCount <- count(brickOutput)
+    rasterCount <- LuccPL::count(rbrickO)
     t <- pracma::toc()
     #print(paste("Count in:", (end.time-start.time), "seconds"))
-    showNotification(paste("Count in:", as.numeric(t), "seconds"), duration = 60)
+    showNotification(paste("Count in:", as.integer(t), "seconds"), duration = 20)
     print('Export raster')
     pracma::tic("Write raster")
     raster::writeRaster(rasterCount, filename = filenameOutCount, datatype='INT4S', overwrite=TRUE, progress = "text")
     t <- pracma::toc()
     #print(paste("Brick exported in:", (end.time-start.time), "seconds"))
-    showNotification(paste("Brick exported in:", as.numeric(t), "seconds"), duration = NULL)
-    print('Done')
-    showNotification("Done", duration = NULL)
+    showNotification(paste("Brick exported in:", as.integer(t), "seconds"), duration = 20)
+    print('Count done')
+    showNotification("Count done", duration = NULL)
     rm(rasterCount)
     gc()
   })
@@ -296,34 +297,60 @@ server <- function(input, output, session) {
     filenameOutVariance <- paste(folderPath(), 'rasterVariance.tif', sep = '/')
     print("Processing variance...")
     showNotification("Processing variance...", duration = 20)
-    brickOutput <- raster::brick(paste(folderPath(), 'stOutput.tif', sep = '/'))
+    rbrickI <- raster::brick(paste(folderPath(), 'stInput.tif', sep = '/'))
     pracma::tic("Variance")
-    rasterVariance <- variance(brickOutput)
+    rasterVariance <- LuccPL::variance(rbrickI)
     t <- pracma::toc()
     #print(paste("Variance in:", (end.time-start.time), "seconds"))
-    showNotification(paste("Variance in:", as.numeric(t), "seconds"), duration = 60)
+    showNotification(paste("Variance in:", as.integer(t), "seconds"), duration = 20)
     print('Export raster')
     pracma::tic("Write raster")
     raster::writeRaster(rasterVariance, filename = filenameOutVariance, datatype='INT4S', overwrite=TRUE, progress = "text")
     t <- pracma::toc()
     #print(paste("Brick exported in:", (end.time-start.time), "seconds"))
-    showNotification(paste("Brick exported in:", as.numeric(t), "seconds"), duration = 60)
+    showNotification(paste("Brick exported in:", as.integer(t), "seconds"), duration = 20)
     print('Done')
-    showNotification("Done", duration = NULL)
-    rm(rasterVariace)
+    showNotification("Variance done", duration = NULL)
+    rm(rasterVariance)
     gc()
   })
   
+  
+  # TRUE
+  observeEvent(input$true, {
+    filenameOutTrue <- paste(folderPath(), 'rasterTrue.tif', sep = '/')
+    print("Processing True...")
+    showNotification("Processing True...", duration = 20)
+    rbrickO <- raster::brick(paste(folderPath(), 'stInput.tif', sep = '/'))
+    pracma::tic("True")
+    rasterTrue <- LuccPL::true(rbrickO)
+    t <- pracma::toc()
+    #print(paste("Count in:", (end.time-start.time), "seconds"))
+    showNotification(paste("True in:", as.integer(t), "seconds"), duration = 20)
+    print('Export raster')
+    pracma::tic("Write raster")
+    raster::writeRaster(rasterTrue, filename = filenameOutTrue, datatype='INT4S', overwrite=TRUE, progress = "text")
+    t <- pracma::toc()
+    #print(paste("Brick exported in:", (end.time-start.time), "seconds"))
+    showNotification(paste("Raster exported in:", as.integer(t), "seconds"), duration = 20)
+    print('Done')
+    showNotification("True done", duration = NULL)
+    rm(rasterTrue)
+    gc()
+  })
+  
+  
+  
+  #####################################################################################################
   # PLOTBAR Input
   observeEvent(input$plotbarI, {
-    filenameOutBarplot <- paste(folderPath(), 'barplotI.jpeg', sep = '/')
     print("Ploting...")
     showNotification("Ploting...", duration = 20)
-    brickInput <- raster::brick(paste(folderPath(), 'stInput.tif', sep = '/'))
-    graphIn <- LuccPL::count(brickInput, for_time_step = TRUE, metadata = metadata, dates = dates)
+    rbrick <- raster::brick(paste(folderPath(), 'stInput.tif', sep = '/'))
+    graphIn <- LuccPL::count(rbrick, for_time_step = TRUE, metadata = metadata(), dates = dates())
     write.csv(graphIn, paste0(folderPath(),"/graphIn.csv"))
     
-    LuccPL::lucc_barplot_data(df = graphIn(), dates = dates(), graph_title="13 classes MT recorte", style="bar", colors = colors(), path_save_jpeg = folderPath())
+    LuccPL::lucc_barplot_data(df = graphIn, dates = dates(), graph_title=input$name_plot, style="bar", colors = colors(), path_save_jpeg = folderPath())
     
     output$imageOutput5 <- renderImage({
       width  <- session$clientData$output_imageInput2_width
@@ -340,16 +367,45 @@ server <- function(input, output, session) {
     gc()
   })
   
-  # PLOTBAR Output
-  observeEvent(input$plotbarO, {
-    filenameOutBarplot <- paste(folderPath(), 'barplotO.jpeg', sep = '/')
+  
+  # PLOTLINE Input
+  observeEvent(input$plotlineI, {
     print("Ploting...")
     showNotification("Ploting...", duration = 20)
-    brickOutput <- raster::brick(paste(folderPath(), 'stOutput.tif', sep = '/'))
-    graphOut <- LuccPL::count(brickOutput, for_time_step = TRUE, metadata = c("0.false","1.true"), dates = dates)
-    write.csv(graphOut, paste0(path,"/graphOut.csv"))
+    rbrick <- raster::brick(paste(folderPath(), 'stInput.tif', sep = '/'))
+    graphIn <- LuccPL::count(rbrick, for_time_step = TRUE, metadata = metadata(), dates = dates())
+    write.csv(graphIn, paste0(folderPath(),"/graphIn.csv"))
     
-    LuccPL::lucc_barplot_result(df = graphOut(), dates = dates(), graph_title="Evolve Forest - Soy", style="bar", colors = c("white","black"), path_save_jpeg = folderPath())
+    LuccPL::lucc_barplot_data(df = graphIn, dates = dates(), graph_title=input$name_plot, style="line", colors = colors(), path_save_jpeg = folderPath())
+    
+    output$imageOutput5 <- renderImage({
+      width  <- session$clientData$output_imageInput2_width
+      list(
+        src = file.path(folderPath(), "lineplotI.jpeg"),
+        width = width,
+        contentType = "image/jpeg",
+        alt = input$tstepIn2
+      )
+      
+    }, deleteFile = FALSE)
+    
+    
+    showNotification("Done", duration = NULL)
+    gc()
+  })
+  
+  
+  
+  
+  # PLOTBAR Output
+  observeEvent(input$plotbarO, {
+    print("Ploting...")
+    showNotification("Ploting...", duration = 20)
+    rbrickO <- raster::brick(paste(folderPath(), 'stOutput.tif', sep = '/'))
+    graphOut <- LuccPL::count(rbrickO, for_time_step = TRUE, metadata = c("0.false","1.true"), dates = dates())
+    write.csv(graphOut, paste0(folderPath(),"/graphOut.csv"))
+    
+    LuccPL::lucc_barplot_result(df = graphOut, dates = dates(), graph_title=input$name_plot, style="bar", colors = c("white","black"), path_save_jpeg = folderPath())
    
     output$imageOutput5 <- renderImage({
       width  <- session$clientData$output_imageInput2_width
@@ -367,22 +423,38 @@ server <- function(input, output, session) {
     gc()
   })
   
+
+  
+  
+  # PLOTLINE Output
+  observeEvent(input$plotlineO, {
+    print("Ploting...")
+    showNotification("Ploting...", duration = 20)
+    rbrickO <- raster::brick(paste(folderPath(), 'stOutput.tif', sep = '/'))
+    graphOut <- LuccPL::count(rbrickO, for_time_step = TRUE, metadata = c("0.false","1.true"), dates = dates())
+    write.csv(graphOut, paste0(folderPath(),"/graphOut.csv"))
+    
+    LuccPL::lucc_barplot_result(df = graphOut, dates = dates(), graph_title=input$name_plot, style="line", colors = c("white","black"), path_save_jpeg = folderPath())
+    
+    output$imageOutput5 <- renderImage({
+      width  <- session$clientData$output_imageInput2_width
+      list(
+        src = file.path(folderPath(), "lineplotO.jpeg"),
+        width = width,
+        contentType = "image/jpeg",
+        alt = input$tstepIn2
+      )
+      
+    }, deleteFile = FALSE)
+    
+    
+    showNotification("Done", duration = NULL)
+    gc()
+  })
+  
   
   #########################################  PAGE 4 (EXPORT)  #################################################    
   
-  # paste0(strsplit(x=path, split = "stBrick.tif"), "stBrickOut.tif")
-  
-  output$stOut.tif <- downloadHandler(
-    
-    filename = function() {
-      paste("output", "tif", sep=".")
-    },
-    
-    content = function(file) {
-      file.copy(paste0(strsplit(x=input$dataFolder$datapath, split = ".tif"), "stBrickOut.tif"),file)
-    },
-    contentType = "tif"
-  )
   
 
   observeEvent(input$plotResult1, {
